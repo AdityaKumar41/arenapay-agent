@@ -1,0 +1,36 @@
+node_modules/
+dist/
+build/
+.turbo/
+.env
+.env.local
+*.log
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+
+# Database
+pgdata/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Prisma
+apps/api/prisma/migrations/
+
+# TON
+packages/contracts/build/
+packages/contracts/temp/
+
+# Misc
+PRD/

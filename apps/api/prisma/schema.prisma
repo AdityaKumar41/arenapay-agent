@@ -1,0 +1,81 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String   @id @default(uuid()) @db.Uuid
+  tonAddress    String   @unique @map("ton_address") @db.VarChar(66)
+  didDocument   Json?    @map("did_document")
+  didVerified   Boolean  @default(false) @map("did_verified")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  reputationScores ReputationScore[]
+  settlements      Settlement[]       @relation("SenderSettlements")
+
+  @@map("users")
+}
+
+model ReputationScore {
+  id                  String   @id @default(uuid()) @db.Uuid
+  userId              String?  @map("user_id") @db.Uuid
+  tonAddress          String   @map("ton_address") @db.VarChar(66)
+  score               Int      @db.SmallInt
+  txComponent         Decimal? @map("tx_component") @db.Decimal(5, 4)
+  didComponent        Decimal? @map("did_component") @db.Decimal(5, 4)
+  behavioralComponent Decimal? @map("behavioral_component") @db.Decimal(5, 4)
+  tier                String?  @db.VarChar(20)
+  computedAt          DateTime @map("computed_at")
+  pushedOnchain       Boolean  @default(false) @map("pushed_onchain")
+  onchainTxHash       String?  @map("onchain_tx_hash") @db.VarChar(128)
+  createdAt           DateTime @default(now()) @map("created_at")
+
+  user User? @relation(fields: [userId], references: [id])
+
+  @@index([tonAddress], name: "idx_reputation_address")
+  @@index([tonAddress, computedAt(sort: Desc)], name: "idx_reputation_latest")
+  @@map("reputation_scores")
+}
+
+model Settlement {
+  id                String    @id @default(uuid()) @db.Uuid
+  onchainId         BigInt?   @map("onchain_id")
+  senderAddress     String    @map("sender_address") @db.VarChar(66)
+  recipientAddress  String    @map("recipient_address") @db.VarChar(66)
+  amountNanoton     BigInt    @map("amount_nanoton")
+  collateralNanoton BigInt    @map("collateral_nanoton")
+  collateralBps     Int?      @map("collateral_bps") @db.SmallInt
+  senderScore       Int?      @map("sender_score") @db.SmallInt
+  feeBps            Int?      @map("fee_bps") @db.SmallInt
+  feeDiscountPct    Int?      @map("fee_discount_pct") @db.SmallInt
+  status            String    @default("pending") @db.VarChar(20)
+  threatAssessment  Json?     @map("threat_assessment")
+  txHash            String?   @map("tx_hash") @db.VarChar(128)
+  createdAt         DateTime  @default(now()) @map("created_at")
+  completedAt       DateTime? @map("completed_at")
+
+  sender       User?         @relation("SenderSettlements", fields: [senderAddress], references: [tonAddress])
+  threatEvents ThreatEvent[]
+
+  @@map("settlements")
+}
+
+model ThreatEvent {
+  id           String   @id @default(uuid()) @db.Uuid
+  settlementId String?  @map("settlement_id") @db.Uuid
+  tonAddress   String?  @map("ton_address") @db.VarChar(66)
+  riskScore    Decimal  @map("risk_score") @db.Decimal(3, 2)
+  flags        String[]
+  actionTaken  String   @map("action_taken") @db.VarChar(20)
+  details      Json?
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  settlement Settlement? @relation(fields: [settlementId], references: [id])
+
+  @@map("threat_events")
+}
