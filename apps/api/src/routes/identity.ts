@@ -1,20 +1,54 @@
-import { Router, Request, Response } from "express";
+import { Router, Request, Response, NextFunction } from 'express';
+import { initiateVerification, handleCallback } from '../services/identityService';
+import { refreshScore } from '../services/aresService';
+import { validate } from '../middleware/validate';
+import { IdentityVerifySchema } from '../lib/schemas';
 
 export const identityRouter = Router();
 
-// POST /api/v1/identity/verify
-identityRouter.post("/verify", async (req: Request, res: Response) => {
-  const { tonAddress } = req.body;
-  res.json({
-    did: `did:ton:${tonAddress}`,
-    verified: false,
-    credentials: [],
-    verificationUrl: "https://identityhub.xyz/verify?redirect=arenapay",
-    sessionId: "session-" + Date.now(),
-  });
+identityRouter.post('/verify', validate(IdentityVerifySchema), async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { tonAddress } = req.body;
+
+    const result = await initiateVerification(tonAddress);
+
+    if (result.verified) {
+      const score = await refreshScore(tonAddress);
+      const io = req.app.get('io');
+      if (io) {
+        io.to(`score:${tonAddress}`).emit('score_update', {
+          type: 'score_update',
+          data: { address: tonAddress, score: score.score, tier: score.tier, trigger: 'identity_verification' },
+        });
+      }
+    }
+
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
 });
 
-// POST /api/v1/identity/callback
-identityRouter.post("/callback", async (req: Request, res: Response) => {
-  res.json({ message: "Verification callback processed" });
+identityRouter.post('/callback', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { tonAddress } = req.body;
+    if (!tonAddress) {
+      return res.status(400).json({ error: 'tonAddress is required' });
+    }
+
+    await handleCallback(tonAddress);
+    const score = await refreshScore(tonAddress);
+
+    const io = req.app.get('io');
+    if (io) {
+      io.to(`score:${tonAddress}`).emit('score_update', {
+        type: 'score_update',
+        data: { address: tonAddress, score: score.score, tier: score.tier, trigger: 'identity_callback' },
+      });
+    }
+
+    res.json({ message: 'Verification callback processed', score });
+  } catch (err) {
+    next(err);
+  }
 });

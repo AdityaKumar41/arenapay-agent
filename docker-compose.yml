@@ -1,4 +1,4 @@
-version: "3.8"
+version: '3.8'
 
 services:
   postgres:
@@ -24,6 +24,58 @@ services:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
       retries: 5
+
+  oracle:
+    build: ./apps/oracle
+    # No public port — oracle is internal only (PRD §14.1)
+    env_file: .env
+    environment:
+      REDIS_URL: redis://redis:6379
+      SCORING_INTERVAL_SECONDS: "21600"
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 10s
+      retries: 5
+      start_period: 15s
+
+  api:
+    build: ./apps/api
+    ports:
+      - "3000:3000"
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://arenapay:arenapay_dev@postgres:5432/arenapay
+      REDIS_URL: redis://redis:6379
+      ARES_ORACLE_URL: http://oracle:8001
+      CORS_ORIGIN: "https://web.telegram.org,https://webk.telegram.org,https://webz.telegram.org"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      oracle:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 10s
+      retries: 5
+      start_period: 20s
+
+  mini-app:
+    build:
+      context: ./apps/mini-app
+      args:
+        VITE_API_URL: http://localhost:3000
+        VITE_WS_URL: http://localhost:3000
+        VITE_NETWORK: testnet
+    ports:
+      - "5173:80"
+    depends_on:
+      api:
+        condition: service_healthy
 
 volumes:
   pgdata:

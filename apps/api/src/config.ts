@@ -15,6 +15,7 @@ const envSchema = z.object({
   IDENTITYHUB_API_KEY: z.string().default(""),
   ESCROW_CONTRACT_ADDRESS: z.string().default(""),
   REGISTRY_CONTRACT_ADDRESS: z.string().default(""),
+  CORS_ORIGIN: z.string().default(""),
   PORT: z.coerce.number().default(3000),
 });
 

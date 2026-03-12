@@ -7,7 +7,8 @@ class Settings(BaseSettings):
     registry_contract_address: str = ""
     oracle_wallet_mnemonic: str = ""
     redis_url: str = "redis://localhost:6379"
-    scoring_interval_seconds: int = 300
+    scoring_interval_seconds: int = 21600  # 6 hours per PRD §6.3
+    allowed_origins: str = ""  # comma-separated; empty = API-only (internal Docker network)
     host: str = "0.0.0.0"
     port: int = 8001
 

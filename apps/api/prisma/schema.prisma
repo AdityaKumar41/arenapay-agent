@@ -12,6 +12,8 @@ model User {
   tonAddress    String   @unique @map("ton_address") @db.VarChar(66)
   didDocument   Json?    @map("did_document")
   didVerified   Boolean  @default(false) @map("did_verified")
+  zkProof       String?  @map("zk_proof") @db.Text
+  zkVerifiedAt  DateTime? @map("zk_verified_at")
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @updatedAt @map("updated_at")
 

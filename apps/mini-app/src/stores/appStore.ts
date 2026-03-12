@@ -5,7 +5,9 @@ export type Screen =
   | "dashboard"
   | "send-payment"
   | "score-breakdown"
-  | "security";
+  | "security"
+  | "history"
+  | "receive";
 
 export interface Notification {
   id: string;
